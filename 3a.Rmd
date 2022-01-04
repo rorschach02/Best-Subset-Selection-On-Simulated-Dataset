@@ -1,0 +1,204 @@
+---
+title: "3a"
+output: word_document
+---
+
+
+Setting up our environment and importing important libraries:
+
+```{r}
+
+### Clear the environment 
+rm(list = ls())
+
+
+### First we will set the directory of the R script 
+setwd("C:/Users/anike/Desktop/Sem 1/EAS 506 Statistical Data Mining/Homework/Homework 3")
+
+
+## Loading all the libraries 
+library(ISLR)
+library(corrplot)
+library(MASS)
+library(klaR)
+library(leaps)
+library(lattice)
+library(ggplot2)
+library(corrplot)
+library(car)
+library(caret)
+library(class)
+
+```
+
+In this question, I need to create my own simulated dataset of matrix 1000*20. 
+
+```{r}
+set.seed(1)
+X <- rnorm(1000 * 20)
+X <- matrix(X,1000,20)
+colnames(X) <- paste("X", 1:20 , sep = "")
+X[1:5,1:5]
+```
+
+Now, I'll add Beta values to this matrix. I'll made 4 of the beta values zero so that i can make some estimations later on about my model .
+I've made my beta = 4,7,12 and 16 as zero. 
+I'll Also create epsilon (Noise) value so that i don't create a perfect model but i'll scale this so that i don't have the same scale as my data.  
+
+```{r}
+set.seed(1)
+beta <- runif(20)
+beta[c(4,7,12,16)] = 0
+
+
+set.seed(1)
+epsilon <- 0.001 * rnorm(1000)
+
+
+```
+
+
+
+Now, I'll create my Y (response variable) as Y = X*Beta +epsilon 
+
+```{r}
+Y <- X%*%beta + epsilon
+length(Y)
+```
+
+Merging both the X and Y to get the full dataset: 
+
+```{r}
+full_dataset <- data.frame(X,Y)
+dim(full_dataset)
+```
+
+
+
+
+The density plot of the data tells that all the classes in our data are in normal distribution. 
+
+
+Splitting the dataset in test and train dataset: 
+
+I'll split my data in 10:90 ratio that is after the splitting my train set will have 100 observation and test set will have 900 observations.
+
+```{r}
+train_index = sample(1:nrow(full_dataset) , nrow(full_dataset)*.1)
+train_data <- full_dataset[train_index, ]
+test_data <- full_dataset[-train_index, ]
+dim(test_data)
+dim(train_data)
+y.test = test_data$Y
+y.train = train_data$Y
+```
+
+Best Subset Selection: 
+Now I'll perform best subset selection to see which is the best model. As i made 4 beta's value zero, i should get 16 variable model as the best model.
+```{r}
+dataset_best_subset_selection <- regsubsets(Y ~ . , data = train_data , nbest = 1,  really.big = TRUE , nvmax = 21) 
+dataset_best_subset_selection_sum <- summary(dataset_best_subset_selection)
+
+dataset_best_subset_selection_sum
+```
+Now if i look at the best subset selection, i made my beta's zero for 4 classes that were 4,7,12 and 16. So the best 16 variable model should exclude those classes for me. 
+
+```{r}
+coef(dataset_best_subset_selection , 16)
+```
+So our model is fitted perfectly. The best 16 variable model excludes 4,7,12 and 16. 
+
+```{r}
+plot(dataset_best_subset_selection, scale = "bic")
+
+```
+The BIC plot also has the class X4,X7,X12 and X16 as the lowest. 
+
+Fitting out model on train set: 
+
+```{r}
+
+predict.regsubsets = function(object,newdata,id , ...){
+  form = as.formula((object$call[[2]]))
+  mat = model.matrix(form, newdata)
+  coefi = coef(object , id = id)
+  xvars = names(coefi)
+  mat[,xvars]%*%coefi
+  
+}
+
+training_error_value <- matrix(rep(NA,20))  
+y_true_train = train_data$Y
+
+
+for (i in 1:20){
+  training_pred = predict(dataset_best_subset_selection , newdata = train_data , id = i )
+  training_error_value[i] =  (1/length(y_true_train)) * sum ((y_true_train - training_pred ) ^ 2) #MSE training error
+}
+training_error_value
+
+```
+
+Plotting the training set MSE associated with the best model of each size: 
+
+```{r}
+plot(training_error_value, col= "blue" , type = "b" , ylab = "Training Error Value")
+which.min(training_error_value)
+points(20, training_error_value[20],col="red" , cex = 2 , pch = 20)
+```
+
+
+Fitting out model on Test set: 
+```{r}
+testing_error_value <- matrix(rep(NA,20))
+y_true_test = test_data$Y
+for (i in 1:20){
+  testing_pred = predict(dataset_best_subset_selection , newdata = test_data , id = i )
+  testing_error_value[i] = (1/length(y_true_test)) * sum ((y_true_test - testing_pred ) ^ 2) # MSE testing error 
+}
+testing_error_value
+```
+
+Plotting the test set MSE associated with the best model of each size:
+
+```{r}
+plot(testing_error_value , col= "red" , type = "b")
+which.min(testing_error_value)
+points(16, testing_error_value[20],col="red" , cex = 2 , pch = 20)
+
+```
+We have our lowest testing error for model with 16 variable. Our the best fit selection has worked perfectly on the test data.
+
+```{r}
+coef(dataset_best_subset_selection , 16)
+```
+
+All the features are positively co-related to our response feature.
+
+Creating a plot displaying: 
+
+for a range of values, r, where Bj is the jTH coefficient estimate for the best model containing r coefficients.
+
+```{r}
+val.errors <- rep(NA, 20)
+x_cols = colnames(X, do.NULL = FALSE, prefix = "X")
+for (i in 1:20) {
+  coefi <- coef(dataset_best_subset_selection, id = i)
+  val.errors[i] <- sqrt(sum((beta[x_cols %in% names(coefi)] - coefi[names(coefi) %in% x_cols])^2) + sum(beta[!(x_cols %in% names(coefi))])^2)
+}
+
+val.errors
+```
+Plotting the error plot: 
+
+```{r}
+plot(val.errors, xlab = "Number of coefficients", ylab = "Error between estimated and true coefficients", pch = 19, type = "b")
+
+```
+
+
+
+
+
+
+
