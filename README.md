@@ -4,17 +4,17 @@
 Here, I've created my own simulated dataset of of matrix 1000*20. I’ve also made 4 of the beta values zero so that i can make some estimations later on about my model . I’ve made my beta = 4,7,12 and 16 as zero. I’ll also create epsilon (Noise) value so that i don’t create a perfect model but i’ll scale this so that i don’t have the same scale as my data.
 
 ## Libraries: 
-library(ISLR)
-library(corrplot)
-library(MASS)
-library(klaR)
-library(leaps)
-library(lattice)
-library(ggplot2)
-library(corrplot)
-library(car)
-library(caret)
-library(class)
+-- ISLR <br/>
+-- corrplot <br/>
+-- MASS <br/>
+-- klaR <br/>
+-- leaps <br/>
+-- lattice <br/>
+-- ggplot2 <br/>
+-- corrplot <br/>
+-- car <br/>
+-- caret <br/>
+-- class <br/>
 
 ## Density Plot:
 
